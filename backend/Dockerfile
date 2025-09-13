@@ -5,7 +5,7 @@ FROM python:3.8
 WORKDIR /app/backend
 
 # installing netcat (nc) since we are using that to listen to postgres server in entrypoint.sh
-RUN apt-get update && apt-get install -y --no-install-recommends netcat && \
+RUN apt-get update && apt-get install -y --no-install-recommends netcat-openbsd && \
     apt-get autoremove -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
