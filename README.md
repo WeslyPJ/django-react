@@ -20,9 +20,17 @@ You shouldn't have to make any other changes to get the app up and running, but 
 Run the following command:
 
 ```sh
-docker-compose -f "docker-compose.dev.yml" up -d --build
+docker compose -f "docker-compose.dev.yml" up -d --build
 ```
 The react frontend should be available at `http://localhost:3000/` and django backend at `http://localhost:8000/` (django admin at `http://localhost:8000/admin/`).
+
+## CI/CD and Deployment
+
+This repository includes automated testing and deployment via GitHub Actions. See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed setup instructions.
+
+- **Automated Testing**: Tests run on every push and pull request
+- **Automatic Deployment**: Deploys to production when tests pass on main branch
+- **Docker-based**: Uses Docker containers for consistent deployments
 
 ## Features
 ### Forgot Password:
