@@ -1,0 +1,125 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:12.0-alpine
+        env:
+          POSTGRES_USER: postgres_user
+          POSTGRES_PASSWORD: postgres_password
+          POSTGRES_DB: boilerplatedb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.8'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '14'
+
+    - name: Cache Python dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Cache Node dependencies
+      uses: actions/cache@v3
+      with:
+        path: frontend/node_modules
+        key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
+    - name: Install Python dependencies
+      working-directory: ./backend
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Install Node dependencies
+      working-directory: ./frontend
+      run: npm install
+
+    - name: Run Django tests
+      working-directory: ./backend
+      env:
+        DATABASE: postgres
+        DB_ENGINE: django.db.backends.postgresql
+        DB_DATABASE: boilerplatedb
+        DB_USER: postgres_user
+        DB_PASSWORD: postgres_password
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DJANGO_ENV: testing
+        DEBUG: 1
+        SECRET_KEY: test-secret-key-for-ci
+        DJANGO_ALLOWED_HOSTS: localhost 127.0.0.1
+      run: |
+        python manage.py collectstatic --noinput
+        python manage.py migrate
+        python manage.py test
+
+    - name: Run frontend tests
+      working-directory: ./frontend
+      run: npm test
+
+    - name: Build frontend
+      working-directory: ./frontend
+      run: npm run build
+
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker images
+      run: |
+        docker compose -f docker-compose.prod.yml build
+
+    - name: Test Docker containers
+      run: |
+        docker compose -f docker-compose.prod.yml up -d
+        # Wait for services to be ready
+        sleep 30
+        # Basic health checks
+        curl -f http://localhost:8080 || exit 1
+        curl -f http://localhost:8000/admin/ || exit 1
+        docker compose -f docker-compose.prod.yml down
+
+    # Add your deployment steps here
+    # For example, push to container registry, deploy to cloud platform, etc.
+    - name: Deploy notification
+      run: |
+        echo "✅ All tests passed and Docker containers built successfully!"
+        echo "🚀 Ready for deployment to production environment."
+        echo "Add your deployment commands in this step."

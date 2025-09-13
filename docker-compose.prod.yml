@@ -1,0 +1,40 @@
+version: "3.7"
+
+services:
+  backend:
+    container_name: backend-prod
+    build: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env.prod
+    stdin_open: true
+    tty: true
+    command: gunicorn mainapp.wsgi:application --bind 0.0.0.0:8000
+    depends_on: 
+      - db
+
+  db:
+    container_name: database-prod
+    image: postgres:12.0-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - ./postgres/.env.prod
+
+  frontend:
+    container_name: frontend-prod
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile.deploy
+      args:
+        API_SERVER: http://localhost:8000
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  django_static_volume:
+  react_static_volume:

@@ -16,6 +16,10 @@ __pycache__/
 **/static/*
 #/media/article_pics/articles
 
+# Production environment files (sensitive)
+**/.env.prod
+**/env.prod
+
 ### Node and React ###
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
